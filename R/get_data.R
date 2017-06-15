@@ -13,6 +13,7 @@ library("tm")
 library("wordcloud")
 library("sentiment")
 library("Rstem")
+library("plyr")
 
 # Twitter authentication (customize this for yourself to reproduce analysis)
 source('~/Dropbox/Code/R/twitter_setup.R', chdir = TRUE)
@@ -138,42 +139,50 @@ write.csv(clean_tweet_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_tex
 # GET CO-FOLLOWER DATA #
 ########################
 
+# Identify unique users and their sentiment 'score'
+# Very Negative = -2, Negative = -1, Neutral = 0, Positive = 1, Very Positive = 2
+sentiments <- c("Very Negative", "Negative", "Neutral", "Positive", "Very Positive")
+score <- c(-2, -1, 0, 1, 2)
+users <- ddply(clean_tweet_data, .(user), function (x) {
+  sentimentA <- sum(as.numeric(as.character(mapvalues(x$sentimentA, sentiments, score))))
+  data.frame(user=x$user[1], sentimentA=sentimentA)
+  })
+
+# Remove users that follow too many people
+numFriends <- c()
+for (i in 2440:nrow(users)) {
+  temp <- try(getUser(users$user[i])$friendsCount)
+  if (class(temp) != "try-error") {
+    numFriends[i] <- temp
+  } else {numFriends[i] <- NA}
+  print(i)
+}
+hist(numFriends)
+nrow(users[numFriends<2000,])/nrow(users) # keeps over 90% of users
+users_trimmed <- users[numFriends<2000,]
+# Export data for users to be included in the social network
+write.csv(users_trimmed, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/social_network_user_data.csv")
+
 # Empty list to store friends
 friends <- list()
 
-# Identify unique users and their sentiment 'score'
-# Very Negative = -2, Negative = -1, Neutral = 0, Positive = 1, Very Positive = 2
-users <- unique(clean_tweet_data$user)
-
-# Get followers ('friends')
-test=x$getFriendIDs()
-for (i in 1:length(users)) {
-  temp <- try(getUser(clean_tweet_data$user[i]))
+# Get 'friends' (THIS ISN'T WORKING YET)
+for (i in 1:nrow(users_trimmed)) {
+  temp <- try(getUser(users_trimmed$user[i]))
   if (class(temp) != "try-error") {
-    list[i] <- temp$getFriendIDs()
-  } else {list[i] <- NA}
+    temp2 <- try(temp$getFriendIDs())
+    if (class(temp2) != "try-error") {
+      friends[[i]] <- temp2
+    } else  {friends[[i]] <- NA}
+  } else {friends[[i]] <- NA}
+  print(i)
 }
-names(list) <- users
+names(list) <- users$user
 
 # Create co-follower matrix
 
 # Export co-follower matrix
 
-############################
-# VISUALIZE SENTIMENT DATA #
-############################
-
-# What positive/negative tweeters said
-
-# When positive/negative tweeters tweeted
-
-# Where positive/negative tweeters live
-
-# Who positive/negative tweeters follow
-
-# How positive/negative tweeters cluster in a co-follower network
-
-# Identify "NOT ALL HEROS WEAR CAPES" tweeters in the social network 
 
 #######
 # END #
