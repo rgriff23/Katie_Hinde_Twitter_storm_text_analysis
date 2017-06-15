@@ -92,7 +92,7 @@ clean_tweet_data$followerCount <- rep(0, nrow(clean_tweet_data))
 clean_tweet_data$location <- clean_tweet_data$description <- rep("0", nrow(clean_tweet_data))
 
 # Loop to get data (have to keep restarting it after hitting the rate/retry limit)
-for (i in 1:nrow(clean_tweet_data)) {
+for (i in 2701:nrow(clean_tweet_data)) {
   temp <- try(getUser(clean_tweet_data$user[i]))
   if (class(temp) == "try-error") {
     clean_tweet_data$followerCount[i] <- NA

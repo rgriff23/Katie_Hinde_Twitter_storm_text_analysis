@@ -17,8 +17,8 @@ clean_tweet_data$sentimentB <- factor(clean_tweet_data$sentimentB, levels=c("joy
 # VIZUALIZE TWEET STORM OVER TIME #
 ###################################
 
-# Volume of tweets
-rev(table(cut.POSIXt(clean_tweet_data$time, breaks=12)))
+# Volume of tweets over time
+table(cut.POSIXt(clean_tweet_data$time, breaks="hour"))
 
 # SentimentA
 
