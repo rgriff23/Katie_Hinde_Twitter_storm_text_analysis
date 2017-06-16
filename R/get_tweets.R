@@ -140,7 +140,7 @@ tweet_data$type <- c(rep("reply", nrow(replies_data)), rep("quote", nrow(quotes_
 tweet_data$followerCount <- tweet_data$friendCount <- rep(0, nrow(tweet_data))
 tweet_data$location <- tweet_data$description <- rep("0", nrow(tweet_data))
 
-# Loop to get data (have to keep restarting it after hitting the rate/retry limit)
+# Loop to get data (have to keep restarting it after hitting the rate/retry limit of 900/15 mins)
 for (i in 4501:nrow(tweet_data)) {
   temp <- try(getUser(tweet_data$user[i]))
   if (class(temp) == "try-error") {
@@ -173,7 +173,7 @@ tweet_data$description <- lapply(tweet_data$description, function (text) {
 })
 tweet_data$description <- unlist(tweet_data$description)
 
-write.csv(tweet_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/tweet_data.csv")
+#write.csv(tweet_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/tweet_data.csv")
 
 #######
 # END #
