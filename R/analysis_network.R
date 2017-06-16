@@ -11,49 +11,45 @@ library("igraph")
 clean_tweet_data <- read.csv("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/clean_tweet_data.csv", row.names=1)
 social_network_user_data <- read.csv("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/social_network_user_data.csv", row.names=1)
 
+# format data
+clean_tweet_data$sentimentA <- factor(clean_tweet_data$sentimentA, levels=c("Very Negative", "Negative", "Neutral", "Positive","Very Positive"))
+clean_tweet_data$sentimentB <- factor(clean_tweet_data$sentimentB, levels=c("joy","sadness","anger","surprise","fear","disgust"))
+clean_tweet_data$time <- as.POSIXct(clean_tweet_data$time)
+
+# Twitter authentication (customize this for yourself to reproduce analysis)
+source('~/Dropbox/Code/R/twitter_setup.R', chdir = TRUE)
+
 ########################
 # GET CO-FOLLOWER DATA #
 ########################
 
-# Identify unique users and their sentiment 'score'
-# Very Negative = -2, Negative = -1, Neutral = 0, Positive = 1, Very Positive = 2
-sentiments <- c("Very Negative", "Negative", "Neutral", "Positive", "Very Positive")
-score <- c(-2, -1, 0, 1, 2)
-users <- ddply(clean_tweet_data, .(user), function (x) {
-  sentimentA <- sum(as.numeric(as.character(mapvalues(x$sentimentA, sentiments, score))))
-  data.frame(user=x$user[1], sentimentA=sentimentA)
-})
+# function for getting friends (use as a model)
+#https://github.com/pablobarbera/twitter_ideology/blob/master/pkg/tweetscores/R/get-friends.R
 
-# Remove users that follow too many people
-numFriends <- c()
-for (i in 2440:nrow(users)) {
-  temp <- try(getUser(users$user[i])$friendsCount)
-  if (class(temp) != "try-error") {
-    numFriends[i] <- temp
-  } else {numFriends[i] <- NA}
+# Empty lists to store users and friends
+users <- friends <- list()
+
+# vector of usernames
+usernames <- clean_tweet_data$user[clean_tweet_data$friendCount<1000]
+test <- getUser(usernames[1])
+
+# Loop to get users (have to keep restarting it after hitting the rate/retry limit)
+for (i in 1:length(usernames)) {
+  temp <- try(getUser(usernames[i]))
+  if (class(temp) == "try-error") {
+    users[[i]] <- NA
+  } else { 
+    users[[i]] <- temp
+  }
   print(i)
 }
-hist(numFriends)
-nrow(users[numFriends<2000,])/nrow(users) # keeps over 90% of users
-users_trimmed <- users[numFriends<2000,]
-# Export data for users to be included in the social network
-write.csv(users_trimmed, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/social_network_user_data.csv")
 
-# Empty list to store friends
-friends <- list()
-
-# Get 'friends' (THIS ISN'T WORKING YET)
-for (i in 1:nrow(users_trimmed)) {
-  temp <- try(getUser(users_trimmed$user[i]))
-  if (class(temp) != "try-error") {
-    temp2 <- try(temp$getFriendIDs())
-    if (class(temp2) != "try-error") {
-      friends[[i]] <- temp2
-    } else  {friends[[i]] <- NA}
-  } else {friends[[i]] <- NA}
+# Loop to get friends (THIS ISN'T WORKING YET)
+for (i in 1:length(users)) {
+  friends[[i]] <- users[i]$getFriendIDs()
   print(i)
 }
-names(list) <- users$user
+names(list) <- usernames
 
 ##############################
 # CREATE CO-FOLLOWER NETWORK #

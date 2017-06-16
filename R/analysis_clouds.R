@@ -18,9 +18,11 @@ clean_tweet_data$sentimentB <- factor(clean_tweet_data$sentimentB, levels=c("joy
 #########################
 
 # first check frequency of different sentiments
-matrix(1:2, 1, 2)
-barplot(table(clean_tweet_data$sentimentA), xlab="Emotional valence", ylab="Proportion of tweets")
-barplot(table(clean_tweet_data$sentimentB), xlab="Emotional tone")
+layout(matrix(1:2, 1, 2))
+tableA <- table(clean_tweet_data$sentimentA)
+tableB <- table(clean_tweet_data$sentimentB)
+barplot(tableA/sum(tableA), xlab="Emotional valence", ylab="Proportion of tweets")
+barplot(tableB/sum(tableB), xlab="Emotional tone")
 
 # make word cloud for entire corpus
 corpus <- Corpus(VectorSource(clean_tweet_data$text))
