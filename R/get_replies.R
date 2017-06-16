@@ -11,9 +11,10 @@
 library("twitteR")
 library("tm")
 library("wordcloud")
-library("sentiment")
-library("Rstem")
-library("plyr")
+library("Rstem") # dependency for sentiment
+library("sentiment") # naive bayes
+library("RSentiment") # calculate_sentiment
+library("plyr") 
 
 # Twitter authentication (customize this for yourself to reproduce analysis)
 source('~/Dropbox/Code/R/twitter_setup.R', chdir = TRUE)
@@ -33,7 +34,7 @@ id <- "874116254767865856"
 
 # Get mentions of @Mammals_Suck prior to the blog post ~36 hours later (rate limited 14 times, 33261 returned)
 #tweets <- searchTwitter("@Mammals_Suck", sinceID=id, maxID="874656504204279808", n=50000, retryOnRateLimit=20)
-source('https://github.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/blob/master/Rdata/all_tweets_33261.RData') # 33261 tweets
+#load('/Users/nunnlab/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/Rdata/all_tweets_33261.RData') # 33261 tweets
 
 # Extract direct replies (must begin with "@Mammals_Suck" and reply to the original tweet)
 replies <- lapply(tweets, function (x) {
@@ -89,41 +90,59 @@ quotes_data <- quotes_data[quotes_data$text != "",] # 2117
 
 # Export data
 #write.csv(replies_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/replies_data.csv")
-#write.csv(quotes_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/quotes_tweet_data.csv")
+#write.csv(quotes_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/quotes_data.csv")
 
 ######################
 # SENTIMENT ANALYSIS #
 ######################
 
 # Empty columns to store sentiments of each tweet
-clean_tweet_data$sentimentA <- clean_tweet_data$sentimentB <- rep("0", nrow(clean_tweet_data))
+replies_data$sentimentA <- replies_data$sentimentB <- rep("0", nrow(replies_data))
+quotes_data$sentimentA <- quotes_data$sentimentB <- rep("0", nrow(quotes_data))
 
 # Very negative/negative/neutral/positive/very positive 
-for (i in 1:nrow(clean_tweet_data)) {
-  clean_tweet_data$sentimentA[i] <- as.character(calculate_sentiment(clean_tweet_data$text[i])$sentiment)
+for (i in 1:nrow(replies_data)) {
+  replies_data$sentimentA[i] <- as.character(calculate_sentiment(replies_data$text[i])$sentiment)
+  print(i)
+}
+for (i in 1:nrow(quotes_data)) {
+  quotes_data$sentimentA[i] <- as.character(calculate_sentiment(quotes_data$text[i])$sentiment)
   print(i)
 }
 
 # Sad/disgusted/angry/fearful/surprised/joyful 
-for (i in 1:nrow(clean_tweet_data)) {
-  clean_tweet_data$sentimentB[i] <- classify_emotion(clean_tweet_data$text[i], algorithm="bayes", prior=1)[,"BEST_FIT"]
+for (i in 1:nrow(replies_data)) {
+  replies_data$sentimentB[i] <- classify_emotion(replies_data$text[i], algorithm="bayes", prior=1)[,"BEST_FIT"]
   print(i)
 }
-sum(is.na(clean_tweet_data$sentimentB))/nrow(clean_tweet_data) # 64% unclassified
+sum(is.na(replies_data$sentimentB))/nrow(replies_data) # 64% unclassified
+for (i in 1:nrow(quotes_data)) {
+  quotes_data$sentimentB[i] <- classify_emotion(quotes_data$text[i], algorithm="bayes", prior=1)[,"BEST_FIT"]
+  print(i)
+}
+sum(is.na(quotes_data$sentimentB))/nrow(quotes_data) # 67% unclassified
+
+#write.csv(replies_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/replies_data.csv")
+#write.csv(quotes_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/quotes_data.csv")
+# load Rdata to start here
+#load("/Users/nunnlab/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/Rdata/up_to_get_user_data.RData")
 
 ######################
 # GET MORE USER DATA #
 ######################
 
-# Empty columns to store GIS coordinates, follower counts, and descriptions
-clean_tweet_data$followerCount <- clean_tweet_data$friendCount <- rep(0, nrow(clean_tweet_data))
-clean_tweet_data$location <- clean_tweet_data$description <- rep("0", nrow(clean_tweet_data))
+# Empty columns to store location, follower counts, and descriptions
+replies_data$followerCount <- replies_data$friendCount <- rep(0, nrow(replies_data))
+replies_data$location <- replies_data$description <- rep("0", nrow(replies_data))
+quotes_data$followerCount <- quotes_data$friendCount <- rep(0, nrow(quotes_data))
+quotes_data$location <- quotes_data$description <- rep("0", nrow(quotes_data))
 
 # Empty list to store friends
-friends <- list()
+replies_friends <- list()
+quotes_friends <- list()
 
 # Loop to get data (have to keep restarting it after hitting the rate/retry limit)
-for (i in 2701:nrow(clean_tweet_data)) {
+for (i in 1:nrow(clean_tweet_data)) {
   temp <- try(getUser(clean_tweet_data$user[i]))
   if (class(temp) == "try-error") {
     clean_tweet_data$followerCount[i] <- NA
@@ -156,8 +175,8 @@ clean_tweet_data$description <- lapply(clean_tweet_data$description, function (t
 })
 clean_tweet_data$description <- unlist(clean_tweet_data$description)
 
-# Export data frame
-write.csv(clean_tweet_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/clean_tweet_data.csv")
+#write.csv(replies_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/replies_data.csv")
+#write.csv(quotes_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/quotes_tweet_data.csv")
 
 #######
 # END #
