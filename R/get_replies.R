@@ -124,44 +124,42 @@ sum(is.na(quotes_data$sentimentB))/nrow(quotes_data) # 67% unclassified
 
 #write.csv(replies_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/replies_data.csv")
 #write.csv(quotes_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/quotes_data.csv")
-# load Rdata to start here
-#load("/Users/nunnlab/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/Rdata/up_to_get_user_data.RData")
 
 ######################
 # GET MORE USER DATA #
 ######################
 
-# Empty columns to store location, follower counts, and descriptions
-replies_data$followerCount <- replies_data$friendCount <- rep(0, nrow(replies_data))
-replies_data$location <- replies_data$description <- rep("0", nrow(replies_data))
-quotes_data$followerCount <- quotes_data$friendCount <- rep(0, nrow(quotes_data))
-quotes_data$location <- quotes_data$description <- rep("0", nrow(quotes_data))
+# load Rdata to start here
+#load("/Users/nunnlab/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/Rdata/up_to_get_user_data.RData")
 
-# Empty list to store friends
-replies_friends <- list()
-quotes_friends <- list()
+# combine data
+tweet_data <- rbind(replies_data, quotes_data)
+tweet_data$type <- c(rep("reply", nrow(replies_data)), rep("quote", nrow(quotes_data)))
+
+# Empty columns to store location, follower counts, and descriptions
+tweet_data$followerCount <- tweet_data$friendCount <- rep(0, nrow(tweet_data))
+tweet_data$location <- tweet_data$description <- rep("0", nrow(tweet_data))
 
 # Loop to get data (have to keep restarting it after hitting the rate/retry limit)
-for (i in 1:nrow(clean_tweet_data)) {
-  temp <- try(getUser(clean_tweet_data$user[i]))
+for (i in 4501:nrow(tweet_data)) {
+  temp <- try(getUser(tweet_data$user[i]))
   if (class(temp) == "try-error") {
-    clean_tweet_data$followerCount[i] <- NA
-    clean_tweet_data$friendCount[i] <- NA
-    clean_tweet_data$description[i] <- NA
-    clean_tweet_data$location[i] <- NA
-    friends[[i]] <- NA
+    tweet_data$followerCount[i] <- NA
+    tweet_data$friendCount[i] <- NA
+    tweet_data$description[i] <- NA
+    tweet_data$location[i] <- NA
   } else {
-    clean_tweet_data$followerCount[i] <- temp$followersCount
-    clean_tweet_data$friendCount[i] <- temp$friendsCount
-    clean_tweet_data$description[i] <- temp$description
-    clean_tweet_data$location[i] <- temp$location
-    friends[[i]] <- temp$getFriendIDs()
+    tweet_data$followerCount[i] <- temp$followersCount
+    tweet_data$friendCount[i] <- temp$friendsCount
+    tweet_data$description[i] <- temp$description
+    tweet_data$location[i] <- temp$location
   }
   print(i)
 }
 
 # Clean description data (similar to tweets)
-clean_tweet_data$description <- lapply(clean_tweet_data$description, function (text) {
+backup <- tweet_data$description
+tweet_data$description <- lapply(tweet_data$description, function (text) {
   text <- gsub("&amp", "", text) # rm ampersands
   text <- gsub("(f|ht)(tp)(s?)(://)(.*)[.|/](.*) ?", "", text) # rm links
   text <- gsub("@\\w+", "", text) # rm usernames
@@ -173,10 +171,9 @@ clean_tweet_data$description <- lapply(clean_tweet_data$description, function (t
   text <- trimws(text) # rm leading and trailing white space
   text <- tolower(text) # convert to lower case
 })
-clean_tweet_data$description <- unlist(clean_tweet_data$description)
+tweet_data$description <- unlist(tweet_data$description)
 
-#write.csv(replies_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/replies_data.csv")
-#write.csv(quotes_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/quotes_tweet_data.csv")
+write.csv(tweet_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/tweet_data.csv")
 
 #######
 # END #
