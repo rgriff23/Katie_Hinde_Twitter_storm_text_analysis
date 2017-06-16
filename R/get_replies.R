@@ -18,28 +18,25 @@ library("plyr")
 # Twitter authentication (customize this for yourself to reproduce analysis)
 source('~/Dropbox/Code/R/twitter_setup.R', chdir = TRUE)
 
-############
-# GET DATA #
-############
+##########################
+# GET REPLIES AND QUOTES #
+##########################
 
 # NOTE: tweets get cut off at 140 characters, which is problematic since some tweets are actually longer
-# given Twitter's new features that don't count certain characters in the character count (e.g., hyperlinks).
+# given Twitter's new features that don't count certain characters in the character count.
 # I don't know how to adjust this with the 'searchTwitter' function, so for now this is just an unfortunate
-# shortcoming of the analysis- the trail end of long tweets are sometimes clipped off, particularly for
-# tweets containing hyperlinks
+# shortcoming of the analysis. Fortunately, much of the time it is only a hyperlink that gets cut off, which
+# is eliminated during data cleaning anyway.
 
 # ID of The Tweet
 id <- "874116254767865856"
 
 # Get mentions of @Mammals_Suck prior to the blog post ~36 hours later (rate limited 14 times, 33261 returned)
-tweets <- searchTwitter("@Mammals_Suck", sinceID=id, maxID="874656504204279808", n=50000, retryOnRateLimit=20)
+#tweets <- searchTwitter("@Mammals_Suck", sinceID=id, maxID="874656504204279808", n=50000, retryOnRateLimit=20)
+source('https://github.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/blob/master/Rdata/all_tweets_33261.RData') # 33261 tweets
 
-# Get mentions of The Tweet
-quotes <- searchTwitter("https://twitter.com/Mammals_Suck/status/874116254767865856", sinceID=id, maxID="874656504204279808", n=50000, retryOnRateLimit=5) #8270
-quotes <- strip_retweets(quotes2) #2281
-
-# Extract direct replies (must begin with "@Mammals_Suck")
-reply <- lapply(tweets, function (x) {
+# Extract direct replies (must begin with "@Mammals_Suck" and reply to the original tweet)
+replies <- lapply(tweets, function (x) {
   if (length(x$replyToSID) == 1) {
     if (x$replyToSID == id) {
       if (substr(x$text, 1, 13)=="@Mammals_Suck") {
@@ -47,21 +44,19 @@ reply <- lapply(tweets, function (x) {
       } else return (FALSE)
     } else return(FALSE)
   } else return(FALSE)
-  })
-reply <- tweets[unlist(reply)] # 2950
+})
+replies <- tweets[unlist(replies)] # 2936
 
-# Extract direct retweets
-
-
-
+# Get quote tweets (these don't mention @Mammals_Suck)
+quotes <- searchTwitter("https://twitter.com/Mammals_Suck/status/874116254767865856", sinceID=id, maxID="874656504204279808", n=50000, retryOnRateLimit=5) #8270
+quotes <- strip_retweets(quotes2) #2281
 
 # Function to clean tweets
-clean_tweets <- function (x) {
-  lapply(reply, function (x) {
+clean_tweets <- function (tweet_list) {
+  lapply(tweet_list, function (x) {
     x <- x$getText() # get text alone
     x <- gsub("&amp", "", x) # rm ampersands
     x <- gsub("(f|ht)(tp)(s?)(://)(.*)[.|/](.*) ?", "", x) # rm links
-    x <- gsub("(RT|via)((?:\\b\\W*@\\w+)+)", "", x) # rm RT info
     x <- gsub("#\\w+", "", x) # rm hashtags
     x <- gsub("@\\w+", "", x) # rm usernames
     x <- iconv(x, "latin1", "ASCII", sub="") # rm emojis
@@ -74,15 +69,27 @@ clean_tweets <- function (x) {
   })
 }
 
-# Clean tweets
+# Clean tweet text 
+replies_clean <- unlist(clean_tweets(replies))
+quotes_clean <- unlist(clean_tweets(quotes))
 
-# Combine text with metadata (user, time, favorites, retweets)
-clean_tweet_data <- data.frame(text=unlist(clean_tweets))
-clean_tweet_data$user <- unlist(lapply(reply, function(x) x$screenName))
-clean_tweet_data$time <- do.call("c", lapply(reply, function(x) x$created))
-clean_tweet_data$favorites <- unlist(lapply(reply, function(x) x$favoriteCount))
-clean_tweet_data$retweets <- unlist(lapply(reply, function(x) x$retweetCount))
-clean_tweet_data <- clean_tweet_data[clean_tweet_data$text != "",] # 2737
+# Combine text with metadata (user, time, favorites, retweets) and drop empty text
+replies_data <- data.frame(text=replies_clean)
+replies_data$user <- unlist(lapply(replies, function(x) x$screenName))
+replies_data$time <- do.call("c", lapply(replies, function(x) x$created))
+replies_data$favorites <- unlist(lapply(replies, function(x) x$favoriteCount))
+replies_data$retweets <- unlist(lapply(replies, function(x) x$retweetCount))
+replies_data <- replies_data[replies_data$text != "",] # 2726
+quotes_data <- data.frame(text=quotes_clean)
+quotes_data$user <- unlist(lapply(quotes, function(x) x$screenName))
+quotes_data$time <- do.call("c", lapply(quotes, function(x) x$created))
+quotes_data$favorites <- unlist(lapply(quotes, function(x) x$favoriteCount))
+quotes_data$retweets <- unlist(lapply(quotes, function(x) x$retweetCount))
+quotes_data <- quotes_data[quotes_data$text != "",] # 2117
+
+# Export data
+#write.csv(replies_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/replies_data.csv")
+#write.csv(quotes_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/quotes_tweet_data.csv")
 
 ######################
 # SENTIMENT ANALYSIS #
@@ -112,6 +119,9 @@ sum(is.na(clean_tweet_data$sentimentB))/nrow(clean_tweet_data) # 64% unclassifie
 clean_tweet_data$followerCount <- clean_tweet_data$friendCount <- rep(0, nrow(clean_tweet_data))
 clean_tweet_data$location <- clean_tweet_data$description <- rep("0", nrow(clean_tweet_data))
 
+# Empty list to store friends
+friends <- list()
+
 # Loop to get data (have to keep restarting it after hitting the rate/retry limit)
 for (i in 2701:nrow(clean_tweet_data)) {
   temp <- try(getUser(clean_tweet_data$user[i]))
@@ -120,11 +130,13 @@ for (i in 2701:nrow(clean_tweet_data)) {
     clean_tweet_data$friendCount[i] <- NA
     clean_tweet_data$description[i] <- NA
     clean_tweet_data$location[i] <- NA
+    friends[[i]] <- NA
   } else {
     clean_tweet_data$followerCount[i] <- temp$followersCount
     clean_tweet_data$friendCount[i] <- temp$friendsCount
     clean_tweet_data$description[i] <- temp$description
     clean_tweet_data$location[i] <- temp$location
+    friends[[i]] <- temp$getFriendIDs()
   }
   print(i)
 }
