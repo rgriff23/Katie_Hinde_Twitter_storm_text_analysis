@@ -22,7 +22,6 @@ tweet_data$time <- as.POSIXct(tweet_data$time)
 timebins <- cut.POSIXt(tweet_data$time, breaks="hour")
 barplot(table(timebins))
 
-
 # SentimentA
 tableA <- table(tweet_data$sentimentA,timebins)
 tableA2 <- tableA
@@ -42,9 +41,12 @@ legend("topright", legend=rev(rownames(tableB)), fill=rev(c("yellow","lightblue"
 # BEAUTIFUL #
 #############
 
-# shaded curve showing the volume of tweets over time
-# vertical lines representing the number of retweets for individual tweets
-# divide by 10 and display only those with at least 10 retweets (62 total)
+# histogram showing the volume of tweets over time + influential tweets
+popular_tweets <- tweet_data[tweet_data$retweets>9,]
+popular_tweets$height <- popular_tweets$retweets/10
+ggplot(tweet_data, aes(time)) +
+  geom_histogram(binwidth=1800,fill=I('lightblue')) +
+  geom_segment(aes(x=time, y=0, xend=time, yend=height), data=popular_tweets, color="red", size=0.4)
 # label lines with >300 retweets (6 total)
 
 #######

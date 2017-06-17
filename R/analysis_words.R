@@ -4,7 +4,9 @@
 
 # load packages
 library("twitteR")
-library("plyr")
+library("tm")
+library("topicmodels")
+library("wordcloud")
 
 # import data
 tweet_data <- read.csv("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/tweet_data.csv", row.names=1)
@@ -14,9 +16,26 @@ tweet_data$sentimentA <- factor(tweet_data$sentimentA, levels=c("Very Negative",
 tweet_data$sentimentB <- factor(tweet_data$sentimentB, levels=c("joy","anger","sadness","surprise","fear","disgust"))
 tweet_data$time <- as.POSIXct(tweet_data$time)
 
-#########################
-# WORD FREQUENCY CLOUDS #
-#########################
+# create corpus
+corpus <- Corpus(VectorSource(tweet_data$text))
+corpus <- tm_map(tm_map(corpus, removeWords, stopwords('english')), stemDocument)
+
+##################
+# TOPIC ANALYSIS #
+##################
+
+# This isn't very interesting because there is really only one topic, but here's the code
+mat <- create_matrix(tweet_data$text[1:10], language='english', removeNumbers=TRUE, stemWords=TRUE)
+dtm <- DocumentTermMatrix(corpus)
+dtm   <- dtm[apply(dtm , 1, sum)> 0, ] #remove docs without words
+test <- LDA(dtm, 5)
+term <- terms(test, 7)
+term <- apply(term, MARGIN = 2, paste, collapse = ", ")
+term
+
+######################
+# SENTIMENT ANALYSIS #
+######################
 
 # first check frequency of different sentiments
 layout(matrix(1:2, 1, 2))
@@ -25,9 +44,11 @@ tableB <- table(tweet_data$sentimentB)
 barplot(tableA/sum(tableA), xlab="Emotional valence", ylab="Proportion of tweets")
 barplot(tableB/sum(tableB), xlab="Emotional tone")
 
+###############
+# WORD CLOUDS #
+###############
+
 # make word cloud for entire corpus
-corpus <- Corpus(VectorSource(tweet_data$text))
-corpus <- tm_map(tm_map(corpus, removeWords, stopwords('english')), stemDocument)
 wordcloud(corpus$content, max.words = 100, colors=heat.colors(6), random.order = FALSE)
 
 # make comparison word cloud for sentimentA 
