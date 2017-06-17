@@ -1,3 +1,9 @@
+# NOTE: tweets get cut off at 140 characters, which is problematic since some tweets are actually longer
+# given Twitter's new features that don't count certain characters in the character count.
+# I don't know how to adjust this with the 'searchTwitter' function, so for now this is just an unfortunate
+# shortcoming of the analysis. Fortunately, much of the time it is only a hyperlink that gets cut off, which
+# is eliminated during data cleaning anyway.
+
 ################
 # PREPARATIONS #
 ################
@@ -22,12 +28,6 @@ source('~/Dropbox/Code/R/twitter_setup.R', chdir = TRUE)
 ##########################
 # GET REPLIES AND QUOTES #
 ##########################
-
-# NOTE: tweets get cut off at 140 characters, which is problematic since some tweets are actually longer
-# given Twitter's new features that don't count certain characters in the character count.
-# I don't know how to adjust this with the 'searchTwitter' function, so for now this is just an unfortunate
-# shortcoming of the analysis. Fortunately, much of the time it is only a hyperlink that gets cut off, which
-# is eliminated during data cleaning anyway.
 
 # ID of The Tweet
 id <- "874116254767865856"
@@ -88,7 +88,6 @@ quotes_data$favorites <- unlist(lapply(quotes, function(x) x$favoriteCount))
 quotes_data$retweets <- unlist(lapply(quotes, function(x) x$retweetCount))
 quotes_data <- quotes_data[quotes_data$text != "",] # 2117
 
-# Export data
 #write.csv(replies_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/replies_data.csv")
 #write.csv(quotes_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/quotes_data.csv")
 
@@ -96,45 +95,31 @@ quotes_data <- quotes_data[quotes_data$text != "",] # 2117
 # SENTIMENT ANALYSIS #
 ######################
 
+# combine data
+tweet_data <- rbind(replies_data, quotes_data)
+tweet_data$type <- c(rep("reply", nrow(replies_data)), rep("quote", nrow(quotes_data)))
+
 # Empty columns to store sentiments of each tweet
-replies_data$sentimentA <- replies_data$sentimentB <- rep("0", nrow(replies_data))
-quotes_data$sentimentA <- quotes_data$sentimentB <- rep("0", nrow(quotes_data))
+tweet_data$sentimentA <- tweet_data$sentimentB <- rep("0", nrow(tweet_data))
 
 # Very negative/negative/neutral/positive/very positive 
-for (i in 1:nrow(replies_data)) {
-  replies_data$sentimentA[i] <- as.character(calculate_sentiment(replies_data$text[i])$sentiment)
-  print(i)
-}
-for (i in 1:nrow(quotes_data)) {
-  quotes_data$sentimentA[i] <- as.character(calculate_sentiment(quotes_data$text[i])$sentiment)
+for (i in 1:nrow(tweet_data)) {
+  tweet_data$sentimentA[i] <- as.character(calculate_sentiment(tweet_data$text[i])$sentiment)
   print(i)
 }
 
 # Sad/disgusted/angry/fearful/surprised/joyful 
-for (i in 1:nrow(replies_data)) {
-  replies_data$sentimentB[i] <- classify_emotion(replies_data$text[i], algorithm="bayes", prior=1)[,"BEST_FIT"]
+for (i in 1:nrow(tweet_data)) {
+  tweet_data$sentimentB[i] <- classify_emotion(tweet_data$text[i], algorithm="bayes", prior=1)[,"BEST_FIT"]
   print(i)
 }
-sum(is.na(replies_data$sentimentB))/nrow(replies_data) # 64% unclassified
-for (i in 1:nrow(quotes_data)) {
-  quotes_data$sentimentB[i] <- classify_emotion(quotes_data$text[i], algorithm="bayes", prior=1)[,"BEST_FIT"]
-  print(i)
-}
-sum(is.na(quotes_data$sentimentB))/nrow(quotes_data) # 67% unclassified
+sum(is.na(tweet_data$sentimentB))/nrow(tweet_data) # 65.3% unclassified
 
-#write.csv(replies_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/replies_data.csv")
-#write.csv(quotes_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/quotes_data.csv")
+#write.csv(tweet_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/tweet_data.csv")
 
 ######################
 # GET MORE USER DATA #
 ######################
-
-# load Rdata to start here
-#load("/Users/nunnlab/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/Rdata/up_to_get_user_data.RData")
-
-# combine data
-tweet_data <- rbind(replies_data, quotes_data)
-tweet_data$type <- c(rep("reply", nrow(replies_data)), rep("quote", nrow(quotes_data)))
 
 # Empty columns to store location, follower counts, and descriptions
 tweet_data$followerCount <- tweet_data$friendCount <- rep(0, nrow(tweet_data))

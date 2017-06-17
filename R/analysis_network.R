@@ -33,8 +33,8 @@ for (i in 1:length(lookup)) {
   } else {users[[i]] <- temp}
   print(i)
 }
-#sum(sapply(users, function(x) is.na(x)))
-#users <- users[sapply(users, function(x) is.na(x))]
+#sum(sapply(users, function(x) is.na(x[[1]])))
+#users <- users[!sapply(users, function(x) is.na(x[[1]]))]
 
 # function for getting friends (use as a model)
 #https://github.com/pablobarbera/twitter_ideology/blob/master/pkg/tweetscores/R/get-friends.R
@@ -43,31 +43,52 @@ for (i in 1:length(lookup)) {
 # CREATE CO-FOLLOWER NETWORK #
 ##############################
 
-# create empty graph
+# create toy data
+toy <- list(
+  A = c("a","b","c","d"),
+  B = c("e","f","g","h"),
+  C = c("i","j","k","l","d","h"),
+  D = c("a","e","f","i","j","k","l")
+)
+
+# create empty matrix
+mat <- c()
 
 # loop through each dyad, count matches, and add edges to graph
-for (i in 1:length(friends)) {
+friends=toy
+for (i in 1:(length(friends)-1)) {
   for (j in (1+i):length(friends)) {
     w <- length(intersect(friends[[i]], friends[[j]]))
-    if (w > 0) {
-      # add edge to the graph
-    }
+    if (w > 0) {mat <- rbind(mat, c(i,j,w))}
   }
 }
+
+# create graph
+g <- graph_from_edgelist(mat[,1:2], directed=FALSE)
+E(g)$weight <- mat[,3]
+
+# plot
+plot(g, edge.width=edge_attr(g)$weight, edge.color="black")
 
 #######################
 # MODULARITY ANALYSIS #
 #######################
 
+# identify modules
+modules <- cluster_spinglass(g)
 
+# find the most popular friends within each module
 
 #####################
 # VIZUALIZE NETWORK #
 #####################
 
+# plot with modules, no vertex labels or edge widths
+plot(g, vertex.label=c(NA,NA,"3",NA), mark.groups=communities(modules))
+
 # color nodes by emotional valence
-# show modules
-# overlay text or images indicating popular cofollows
+# overlay text or images indicating popular mutual friends
+# identify @Mammals_Suck (and other nodes of interest) by creating labels only for them (other nodes are NA)
 
 #######
 # END #

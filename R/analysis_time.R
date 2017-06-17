@@ -18,6 +18,15 @@ quotes_data$sentimentA <- factor(quotes_data$sentimentA, levels=c("Very Negative
 quotes_data$sentimentB <- factor(quotes_data$sentimentB, levels=c("joy","anger","sadness","surprise","fear","disgust"))
 quotes_data$time <- as.POSIXct(quotes_data$time)
 
+#############
+# BEAUTIFUL #
+#############
+
+# shaded curve showing the volume of tweets over time
+# vertical lines representing the number of retweets for individual tweets
+    # divide by 10 and display only those with at least 10 retweets (62 total)
+    # label lines with >300 retweets (6 total)
+
 ###################################
 # VIZUALIZE TWEET STORM OVER TIME #
 ###################################
