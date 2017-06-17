@@ -4,7 +4,6 @@
 
 # load packages
 library("twitteR")
-library("plyr")
 library("igraph")
 
 # import data
