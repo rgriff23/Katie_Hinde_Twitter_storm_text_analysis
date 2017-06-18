@@ -22,14 +22,12 @@ source('~/Dropbox/Code/R/twitter_setup.R', chdir = TRUE)
 # GET CO-FOLLOWER DATA #
 ########################
 
-# get users (CHANGE TO FRIENDS)
-users <- list()
+# get users 
+friends <- list()
 lookup <- unique(tweet_data$user[tweet_data$friendCount < 2000]) # keeps 92.4% of users (4307)
 for (i in 1:length(lookup)) {
   temp <- try(getUser(lookup[i])$getFollowerIDs(retryOnRateLimit=100))
-  if (class(temp)=="try-error") {
-    if(grep("HTTP 404", test[1])==1) {users[[i]] <- NA} else {stop("Rate limit reached")}
-  } else {users[[i]] <- temp}
+  if (class(temp)=="try-error") {friends[[i]] <- NA} else {friends[[i]] <- temp}
   print(i)
 }
 #sum(sapply(users, function(x) is.na(x[[1]])))
@@ -41,14 +39,6 @@ for (i in 1:length(lookup)) {
 ##############################
 # CREATE CO-FOLLOWER NETWORK #
 ##############################
-
-# create toy data
-toy <- list(
-  A = c("a","b","c","d"),
-  B = c("e","f","g","h"),
-  C = c("i","j","k","l","d","h"),
-  D = c("a","e","f","i","j","k","l")
-)
 
 # create empty matrix
 mat <- c()

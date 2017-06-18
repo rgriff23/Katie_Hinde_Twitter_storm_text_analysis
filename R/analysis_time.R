@@ -45,7 +45,7 @@ legend("topright", legend=rev(rownames(tableB)), fill=rev(c("yellow","lightblue"
 popular_tweets <- tweet_data[tweet_data$retweets>9,]
 popular_tweets$height <- popular_tweets$retweets/10
 ggplot(tweet_data, aes(time)) +
-  geom_histogram(binwidth=1800,fill=I('lightblue')) +
+  geom_histogram(binwidth=1800,fill=I('lightsteelblue')) +
   geom_segment(aes(x=time, y=0, xend=time, yend=height), data=popular_tweets, color="red", size=0.4)
 # label lines with >300 retweets (6 total)
 
