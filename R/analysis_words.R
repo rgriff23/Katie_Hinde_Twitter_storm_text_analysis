@@ -3,20 +3,21 @@
 ################
 
 # load packages
-library("twitteR")
 library("tm")
 library("topicmodels")
 library("wordcloud")
+library("ggplot2")
+library("plyr")
 
 # import data
-tweet_data <- read.csv("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/tweet_data.csv", row.names=1)
+tweet_data <- read.csv("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/tweet_data.csv")
 
 # format data
 tweet_data$sentimentA <- factor(tweet_data$sentimentA, levels=c("Very Negative", "Negative", "Neutral", "Positive","Very Positive"))
 tweet_data$sentimentB <- factor(tweet_data$sentimentB, levels=c("joy","anger","sadness","surprise","fear","disgust"))
 tweet_data$time <- as.POSIXct(tweet_data$time)
 
-# create corpus
+# create corpus from tweets
 corpus <- Corpus(VectorSource(tweet_data$text))
 corpus <- tm_map(tm_map(corpus, removeWords, stopwords('english')), stemDocument)
 
@@ -37,12 +38,11 @@ term
 # SENTIMENT ANALYSIS #
 ######################
 
-# first check frequency of different sentiments
-layout(matrix(1:2, 1, 2))
-tableA <- table(tweet_data$sentimentA)
-tableB <- table(tweet_data$sentimentB)
-barplot(tableA/sum(tableA), xlab="Emotional valence", ylab="Proportion of tweets")
-barplot(tableB/sum(tableB), xlab="Emotional tone")
+# barplot for emotional valence
+ggplot(tweet_data, aes(sentimentA)) + geom_bar()
+
+# barplot for emotional tone
+ggplot(tweet_data[!is.na(tweet_data$sentimentB),], aes(sentimentB)) + geom_bar() 
 
 ###############
 # WORD CLOUDS #

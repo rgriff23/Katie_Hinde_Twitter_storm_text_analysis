@@ -117,9 +117,9 @@ sum(is.na(tweet_data$sentimentB))/nrow(tweet_data) # 65.3% unclassified
 
 #write.csv(tweet_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/tweet_data.csv")
 
-######################
-# GET MORE USER DATA #
-######################
+########################################
+# ADD TIME AND USER DATA TO TWEET DATA #
+########################################
 
 # Empty columns to store location, follower counts, and descriptions
 tweet_data$followerCount <- tweet_data$friendCount <- rep(0, nrow(tweet_data))
@@ -158,7 +158,25 @@ tweet_data$description <- lapply(tweet_data$description, function (text) {
 })
 tweet_data$description <- unlist(tweet_data$description)
 
-#write.csv(tweet_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/tweet_data.csv")
+# add time bins (3 hour intervals, for 12 total intervals)
+tweet_data$time_bin <- cut.POSIXt(tweet_data$time, breaks="3 hours", labels = FALSE)
+
+#write.csv(tweet_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/tweet_data.csv", row.names = FALSE)
+
+###################
+# USER-LEVEL DATA #
+###################
+
+# create user level data
+user_data <- ddply(tweet_data, .(user), function(x) {
+  time_join <- min(x$time)
+  time_bin <- x[which.min(x$time),"time_bin"]
+  followers <- x$followerCount[1]
+  data.frame(time_join, time_bin, followers)
+})
+
+# export user data
+#write.csv(user_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/user_data.csv", row.names = FALSE)
 
 #######
 # END #
