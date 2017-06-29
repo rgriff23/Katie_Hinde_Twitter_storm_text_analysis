@@ -8,7 +8,7 @@
 # PREPARATIONS #
 ################
 
-# install Rstem and sentiment package (not available on CRAN)
+# installing Rstem and sentiment package (not available on CRAN)
 #library("devtools")
 #install.packages("Rstem", repos = "http://www.omegahat.net/R")
 #install_url("https://cran.r-project.org/src/contrib/Archive/sentiment/sentiment_0.2.tar.gz")
@@ -22,21 +22,21 @@ library("sentiment") # naive bayes
 library("RSentiment") # calculate_sentiment
 library("plyr") 
 
-# Twitter authentication (customize this for yourself to reproduce analysis)
+# My Twitter authentication 
 source('~/Dropbox/Code/R/twitter_setup.R', chdir = TRUE)
 
-##########################
-# GET REPLIES AND QUOTES #
-##########################
+################################
+# GET REPLIES AND QUOTE TWEETS #
+################################
 
 # ID of The Tweet
 id <- "874116254767865856"
 
-# Get mentions of @Mammals_Suck prior to the blog post ~36 hours later (rate limited 14 times, 33261 returned)
-#tweets <- searchTwitter("@Mammals_Suck", sinceID=id, maxID="874656504204279808", n=50000, retryOnRateLimit=20)
-#load('/Users/nunnlab/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/Rdata/all_tweets_33261.RData') # 33261 tweets
+# Get mentions of @Mammals_Suck prior to the blog post ~36 hours later 
+tweets <- searchTwitter("@Mammals_Suck", sinceID=id, maxID="874656504204279808", n=50000, retryOnRateLimit=20)
+#saveRDS(tweets, '~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/all_raw_tweets_33261.rds') # 33261 tweets
 
-# Extract direct replies (must begin with "@Mammals_Suck" and reply to the original tweet)
+# Get direct replies (must begin with "@Mammals_Suck" and reply to the original tweet)
 replies <- lapply(tweets, function (x) {
   if (length(x$replyToSID) == 1) {
     if (x$replyToSID == id) {
@@ -46,11 +46,15 @@ replies <- lapply(tweets, function (x) {
     } else return(FALSE)
   } else return(FALSE)
 })
-replies <- tweets[unlist(replies)] # 2936
+replies <- tweets[unlist(replies)] # 2936 replies
 
-# Get quote tweets (these don't mention @Mammals_Suck)
+# Get quote tweets (must quote the original tweet)
 quotes <- searchTwitter("https://twitter.com/Mammals_Suck/status/874116254767865856", sinceID=id, maxID="874656504204279808", n=50000, retryOnRateLimit=5) #8270
-quotes <- strip_retweets(quotes2) #2281
+quotes <- strip_retweets(quotes) #2281 quote tweets
+
+##################################
+# CLEAN REPLIES AND QUOTE TWEETS #
+##################################
 
 # Function to clean tweets
 clean_tweets <- function (tweet_list) {
@@ -70,34 +74,23 @@ clean_tweets <- function (tweet_list) {
   })
 }
 
-# Clean tweet text 
-replies_clean <- unlist(clean_tweets(replies))
-quotes_clean <- unlist(clean_tweets(quotes))
+# Combine and clean tweet text 
+tweets_combined <- append(replies, quotes)
+tweets_clean <- unlist(clean_tweets(tweets_combined))
 
 # Combine text with metadata (user, time, favorites, retweets) and drop empty text
-replies_data <- data.frame(text=replies_clean)
-replies_data$user <- unlist(lapply(replies, function(x) x$screenName))
-replies_data$time <- do.call("c", lapply(replies, function(x) x$created))
-replies_data$favorites <- unlist(lapply(replies, function(x) x$favoriteCount))
-replies_data$retweets <- unlist(lapply(replies, function(x) x$retweetCount))
-replies_data <- replies_data[replies_data$text != "",] # 2726
-quotes_data <- data.frame(text=quotes_clean)
-quotes_data$user <- unlist(lapply(quotes, function(x) x$screenName))
-quotes_data$time <- do.call("c", lapply(quotes, function(x) x$created))
-quotes_data$favorites <- unlist(lapply(quotes, function(x) x$favoriteCount))
-quotes_data$retweets <- unlist(lapply(quotes, function(x) x$retweetCount))
-quotes_data <- quotes_data[quotes_data$text != "",] # 2117
-
-#write.csv(replies_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/replies_data.csv")
-#write.csv(quotes_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/quotes_data.csv")
-
-######################
-# SENTIMENT ANALYSIS #
-######################
-
-# combine data
-tweet_data <- rbind(replies_data, quotes_data)
+tweet_data <- data.frame(text=tweets_clean)
+tweet_data <- tweet_data[tweet_data$text != "",]
+tweet_data$user <- unlist(lapply(tweets_combined, function(x) x$screenName))
+tweet_data$time <- do.call("c", lapply(tweets_combined, function(x) x$created))
+tweet_data$favorites <- unlist(lapply(tweets_combined, function(x) x$favoriteCount))
+tweet_data$retweets <- unlist(lapply(tweets_combined, function(x) x$retweetCount))
 tweet_data$type <- c(rep("reply", nrow(replies_data)), rep("quote", nrow(quotes_data)))
+tweet_data$time_bin <- cut.POSIXt(tweet_data$time, breaks="3 hours", labels = FALSE)
+
+########################################
+# ADD SENTIMENT ANALYSIS TO TWEET DATA #
+########################################
 
 # Empty columns to store sentiments of each tweet
 tweet_data$sentimentA <- tweet_data$sentimentB <- rep("0", nrow(tweet_data))
@@ -115,13 +108,11 @@ for (i in 1:nrow(tweet_data)) {
 }
 sum(is.na(tweet_data$sentimentB))/nrow(tweet_data) # 65.3% unclassified
 
-#write.csv(tweet_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/tweet_data.csv")
+###############################
+# ADD USER DATA TO TWEET DATA #
+###############################
 
-########################################
-# ADD TIME AND USER DATA TO TWEET DATA #
-########################################
-
-# Empty columns to store location, follower counts, and descriptions
+# Empty columns to store user follower count, friend count, location, and description
 tweet_data$followerCount <- tweet_data$friendCount <- rep(0, nrow(tweet_data))
 tweet_data$location <- tweet_data$description <- rep("0", nrow(tweet_data))
 
@@ -142,7 +133,7 @@ for (i in 4501:nrow(tweet_data)) {
   print(i)
 }
 
-# Clean description data (similar to tweets)
+# Clean description data (similar to cleaning tweets)
 backup <- tweet_data$description
 tweet_data$description <- lapply(tweet_data$description, function (text) {
   text <- gsub("&amp", "", text) # rm ampersands
@@ -158,25 +149,8 @@ tweet_data$description <- lapply(tweet_data$description, function (text) {
 })
 tweet_data$description <- unlist(tweet_data$description)
 
-# add time bins (3 hour intervals, for 12 total intervals)
-tweet_data$time_bin <- cut.POSIXt(tweet_data$time, breaks="3 hours", labels = FALSE)
-
+# export tweet data
 #write.csv(tweet_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/tweet_data.csv", row.names = FALSE)
-
-###################
-# USER-LEVEL DATA #
-###################
-
-# create user level data
-user_data <- ddply(tweet_data, .(user), function(x) {
-  time_join <- min(x$time)
-  time_bin <- x[which.min(x$time),"time_bin"]
-  followers <- x$followerCount[1]
-  data.frame(time_join, time_bin, followers)
-})
-
-# export user data
-#write.csv(user_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/user_data.csv", row.names = FALSE)
 
 #######
 # END #

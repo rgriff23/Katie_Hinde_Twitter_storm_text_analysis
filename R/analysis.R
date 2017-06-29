@@ -3,7 +3,6 @@
 ################
 
 # load packages
-library("twitteR")
 library("plyr")
 library("ggplot2")
 library("tm")
@@ -12,24 +11,15 @@ library("wordcloud")
 library("igraph")
 library("animation")
 
-# Twitter authentication (customize this for yourself to reproduce analysis)
-source('~/Dropbox/Code/R/twitter_setup.R', chdir = TRUE)
-
 # import and format tweet data
-#tweet_data <- read.csv("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/tweet_data.csv", row.names=1)
-tweet_data <- read.csv("~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/tweet_data.csv")
+tweet_data <- read.csv("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/tweet_data.csv", row.names=1)
 tweet_data$sentimentA <- factor(tweet_data$sentimentA, levels=c("Very Negative", "Negative", "Neutral", "Positive","Very Positive"))
 tweet_data$sentimentB <- factor(tweet_data$sentimentB, levels=c("joy","sadness","anger","surprise","fear","disgust"))
 tweet_data$time <- as.POSIXct(tweet_data$time, format="%Y-%m-%d %H:%M:%S")
 
-# import and format user-level data
-user_data <- read.csv("~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/user_data.csv")
-user_data$time_join <- as.POSIXct(user_data$time_join, format="%Y-%m-%d %H:%M:%S")
-
-# import friend/social network data
-friends <- readRDS("~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/friend_list.rds")
-g <- readRDS("~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/graph_fancy.rds")
-g_layout <- readRDS("~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/graph_layout.rds")
+# import social network and layout for plotting
+g <- readRDS("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/graph_fancy.rds")
+g_layout <- readRDS("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/graph_layout.rds")
 
 #########################################
 # TWEETS OVER TIME + INFLUENTIAL TWEETS #
@@ -118,31 +108,20 @@ interval=1, movie.name="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis
 # MOST POPULAR FRIENDS IN EACH CLUSTER #
 ########################################
 
-# function to find the N most popular friends within each major cluster (1-3)
-popular.friends <- function (graph, membershipVector, friendsList, clusterID, N) {
-  clust <- V(g)[membershipVector==clusterID]$label
-  friend_tab <- sort(table(unlist(friendsList[clust])), decreasing=TRUE)
-  i <- 1
-  topfriends <- c()
-  while (length(topfriends) < N) {
-    temp <- try(getUser(names(friend_tab)[i]))
-    if (class(temp)!="try-error") {topfriends <- append(topfriends, temp$screenName)} 
-    i <- i + 1
-  }
-  return(topfriends)
-}
-topfriends1 <- popular.friends(g, greedy_mem, friends, 1, 25)
-topfriends2 <- popular.friends(g, greedy_mem, friends, 2, 25)
-topfriends3 <- popular.friends(g, greedy_mem, friends, 3, 25)
-topfriendsSN1 # idk?
-topfriendsSN2 # the right
-topfriendsSN3 # the left
+# import popular friends
+topfriends <- readRDS("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/topfriends.rds")
+
+# combine into table
+topfriends <- cbind(topfriends[[1]], topfriends[[2]], topfriends[[3]])
+colnames(topfriends) <- c("Cluster 1", "Cluster 2", "Cluster 3")
+rownames(topfriends) <- 1:25
+topfriends
 
 ######################################
 # SENTIMENTS & WORDS IN EACH CLUSTER #
 ######################################
 
-# 
+# stacked barplot of volume of tweets over time
 tab0 <- table(tweet_data$cluster,tweet_data$time_bin)[1:3,]
 rownames(tab0) <- c("Apolitical","Rightwing","Leftwing")
 colnames(tab0) <- 1:12
