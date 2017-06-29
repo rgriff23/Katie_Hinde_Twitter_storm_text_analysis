@@ -1,3 +1,7 @@
+# NOTE: the network animation requires that the Image Magick software is installed.
+# See here for instructions on installing Image Magick: https://www.imagemagick.org/script/download.php 
+# Since I'm working on a Mac, I did this using the Macports method.
+
 ################
 # PREPARATIONS #
 ################
@@ -11,8 +15,7 @@ library("plyr")
 source('~/Dropbox/Code/R/twitter_setup.R', chdir = TRUE)
 
 # import and format tweet data
-#tweet_data <- read.csv("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/tweet_data.csv", row.names=1)
-tweet_data <- read.csv("~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/tweet_data.csv")
+tweet_data <- read.csv("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/tweet_data.csv", row.names=1)
 tweet_data$sentimentA <- factor(tweet_data$sentimentA, levels=c("Very Negative", "Negative", "Neutral", "Positive","Very Positive"))
 tweet_data$sentimentB <- factor(tweet_data$sentimentB, levels=c("joy","sadness","anger","surprise","fear","disgust"))
 tweet_data$time <- as.POSIXct(tweet_data$time, format="%Y-%m-%d %H:%M:%S")
@@ -158,13 +161,13 @@ topfriends3 <- popular.friends(g, greedy_mem, friends, 3, 25)
 # export updated tweet_data
 tweet_data$cluster <- 0
 for (i in 1:nrow(tweet_data)) {
-  if (tweet_data$user[i] %in% V(gf)$label) {
-    tweet_data$cluster[i] <- V(gf)$membership[which(V(gf)$label==tweet_data$user[i])]
+  if (tweet_data$user[i] %in% V(g)$label) {
+    tweet_data$cluster[i] <- V(g)$membership[which(V(g)$label==tweet_data$user[i])]
   } else (tweet_data$cluster[i] <- NA)
 }
 
 # export updated tweet_data
-#write.csv(tweet_data, "~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/tweet_data.csv")
+#write.csv(tweet_data, "~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/tweet_data.csv", row.names = FALSE)
 
 ############################################
 # FIND GOOD LAYOUT FOR VIZUALIZING NETWORK #

@@ -12,7 +12,7 @@ library("igraph")
 library("animation")
 
 # import and format tweet data
-tweet_data <- read.csv("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/tweet_data.csv", row.names=1)
+tweet_data <- read.csv("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/tweet_data.csv")
 tweet_data$sentimentA <- factor(tweet_data$sentimentA, levels=c("Very Negative", "Negative", "Neutral", "Positive","Very Positive"))
 tweet_data$sentimentB <- factor(tweet_data$sentimentB, levels=c("joy","sadness","anger","surprise","fear","disgust"))
 tweet_data$time <- as.POSIXct(tweet_data$time, format="%Y-%m-%d %H:%M:%S")
@@ -20,6 +20,9 @@ tweet_data$time <- as.POSIXct(tweet_data$time, format="%Y-%m-%d %H:%M:%S")
 # import social network and layout for plotting
 g <- readRDS("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/graph_fancy.rds")
 g_layout <- readRDS("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/graph_layout.rds")
+
+# import list of the most popular friends from each social network cluster
+topfriends <- readRDS("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/topfriends.rds")
 
 #########################################
 # TWEETS OVER TIME + INFLUENTIAL TWEETS #
@@ -108,10 +111,7 @@ interval=1, movie.name="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis
 # MOST POPULAR FRIENDS IN EACH CLUSTER #
 ########################################
 
-# import popular friends
-topfriends <- readRDS("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/topfriends.rds")
-
-# combine into table
+# combine top friends into table
 topfriends <- cbind(topfriends[[1]], topfriends[[2]], topfriends[[3]])
 colnames(topfriends) <- c("Cluster 1", "Cluster 2", "Cluster 3")
 rownames(topfriends) <- 1:25
