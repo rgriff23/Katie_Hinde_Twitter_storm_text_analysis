@@ -17,34 +17,54 @@ tweet_data$sentimentA <- factor(tweet_data$sentimentA, levels=c("Very Negative",
 tweet_data$sentimentB <- factor(tweet_data$sentimentB, levels=c("joy","sadness","anger","surprise","fear","disgust"))
 tweet_data$time <- as.POSIXct(tweet_data$time, format="%Y-%m-%d %H:%M:%S")
 
-# import social network and layout for plotting
-g <- readRDS("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/graph_fancy.rds")
-g_layout <- readRDS("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/graph_layout.rds")
-
-# import list of the most popular friends from each social network cluster
-topfriends <- readRDS("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/topfriends.rds")
+# import social network, layout for plotting, and popular friends from each cluster
+temp <- tempfile()
+download.file("https://github.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/raw/master/data/graph_fancy.rds", temp)
+g <- readRDS(temp)
+download.file("https://github.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/raw/master/data/graph_layout.rds", temp)
+g_layout <- readRDS(temp)
+download.file("https://github.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/raw/master/data/topfriends.rds", temp)
+topfriends <- readRDS(temp)
+unlink(temp)
 
 #########################################
 # TWEETS OVER TIME + INFLUENTIAL TWEETS #
 #########################################
 
-# histogram showing the volume of tweets over time + influential tweets
+# histogram of tweet volume over time, with popular tweets overlaid
 popular_tweets <- tweet_data[tweet_data$retweets>9,]
 popular_tweets$height <- popular_tweets$retweets/10
-ggplot(tweet_data, aes(time)) +
+popular_tweets$user <- as.character(popular_tweets$user) 
+super_tweets <- as.character(head(tweet_data[order(tweet_data$retweets, decreasing = TRUE),1:5],6)$user)
+popular_tweets$user <- ifelse(popular_tweets$user%in%super_tweets, popular_tweets$user, NA)
+ggplot(tweet_data, aes(time, label=user)) +
   geom_histogram(binwidth=1800,fill=I('lightsteelblue')) +
-  geom_segment(aes(x=time, y=0, xend=time, yend=height), data=popular_tweets, color="red", size=0.4)
-# label lines with >300 retweets (6 total)
+  geom_segment(aes(x=time, y=0, xend=time, yend=height), data=popular_tweets, color="red", size=0.4) + 
+  geom_text(aes(y=height, label=user), data=popular_tweets, size=3) +
+  ylab("Count") +
+  xlab("Time") +
+  theme(axis.text=element_text(size=11),
+        axis.title=element_text(size=20))
 
 ####################################
 # SENTIMENT ANALYSIS & WORD CLOUDS #
 ####################################
 
 # barplot for emotional valence
-ggplot(tweet_data, aes(sentimentA)) + geom_bar()
+ggplot(tweet_data, aes(sentimentA)) + 
+  geom_bar() +
+  ylab("Count") +
+  xlab("") +
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=20))
 
 # barplot for emotional tone
-ggplot(tweet_data[!is.na(tweet_data$sentimentB),], aes(sentimentB)) + geom_bar() 
+ggplot(tweet_data[!is.na(tweet_data$sentimentB),], aes(sentimentB)) + 
+  geom_bar() +
+  ylab("Count") +
+  xlab("") +
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=20))
 
 # create corpus from tweets
 corpus <- Corpus(VectorSource(tweet_data$text))
@@ -102,7 +122,7 @@ saveGIF({
   for (i in 2:13) {
     cols[V(g2)$time_bin<i] <- V(g2)$color[V(g2)$time_bin<i]
     labs[V(g2)$time_bin<i] <- V(g2)$label_special[V(g2)$time_bin<i]
-    plot(g2, vertex.color=cols, ylim=c(-1,0.5), xlim=c(-0.5,1), vertex.label=labs, vertex.label.cex=1, vertex.label.color="black", vertex.label.font=2, layout=g_layout)
+    plot(g2, vertex.color=cols, ylim=c(-0.75,0.3), xlim=c(-0.3,0.6), vertex.label=labs, vertex.label.cex=1, vertex.label.color="black", vertex.label.font=2, layout=g_layout)
     }
 },
 interval=1, movie.name="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/network_animation.gif")
@@ -122,21 +142,40 @@ topfriends
 ######################################
 
 # stacked barplot of volume of tweets over time
-tab0 <- table(tweet_data$cluster,tweet_data$time_bin)[1:3,]
-rownames(tab0) <- c("Apolitical","Rightwing","Leftwing")
-colnames(tab0) <- 1:12
-barplot(tab0, beside=FALSE, col=c("gray","red","blue"), xlab="time", ylab="frequency")
-legend("topleft", fill=c("blue","red","gray"), legend= c("Leftwing","Rightwing","Apolitical"))
+tweet_data$time_bin <- factor(tweet_data$time_bin, levels=1:12)
+tweet_data$cluster <- mapvalues(tweet_data$cluster, 1:12, c("Apolitical", "Rightwing","Leftwing",NA,NA,NA,NA,NA,NA,NA,NA,NA))
+tweet_data2 <- tweet_data[!is.na(tweet_data$cluster),]
+ggplot(tweet_data2, aes(x=time_bin, fill=cluster)) +
+  geom_bar() +
+  scale_fill_manual(values=c("darkgray","blue","red")) +
+  xlab("Time slice (3 hour intervals)") +
+  ylab("Count") +
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=20),
+        legend.title=element_text(size=20),
+        legend.text=element_text(size=12))
 
 # side-by-side barplot for emotional valence
-tab1 <- table(tweet_data$sentimentA, tweet_data$cluster)[,1:3]
-barplot(tab1, beside=TRUE, names.arg=c("Apolitical","Rightwing","Leftwing"),
-        main="Emotional valence (very negative to very positive)")
+ggplot(tweet_data2, aes(x=cluster, fill=sentimentA)) +
+  geom_bar(position=position_dodge()) +
+  scale_fill_brewer(palette="RdBu", name="Emotional valence") +
+  ylab("Count") +
+  xlab("") +
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=20),
+        legend.title=element_text(size=20),
+        legend.text=element_text(size=12))
 
 # side-by-side barplot for emotional tone
-tab2 <- table(tweet_data$sentimentB, tweet_data$cluster)[,1:3]
-barplot(tab2, beside=TRUE, names.arg=c("Apolitical","Rightwing","Leftwing"),
-        main="Emotional tone (joy, sadness, anger, surprise, fear, disgust)")
+ggplot(tweet_data2[!is.na(tweet_data2$sentimentB),], aes(x=cluster, fill=sentimentB)) +
+  geom_bar(position=position_dodge()) +
+  scale_fill_brewer(palette="Accent", name="Emotion") +
+  ylab("Count") +
+  xlab("") +
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=20),
+        legend.title=element_text(size=20),
+        legend.text=element_text(size=12))
 
 # create corpuses (corpi?)
 corpus1 <- Corpus(VectorSource(tweet_data$text[tweet_data$cluster==1]))
