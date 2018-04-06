@@ -11,8 +11,9 @@ library("twitteR")
 library("igraph")
 library("plyr")
 
-# Twitter authentication (customize this for yourself to reproduce analysis)
-source('~/Dropbox/Code/R/twitter_setup.R', chdir = TRUE)
+# My Twitter authentication (customize for yourself)
+# source('~/Dropbox/Code/R/twitter_setup.R', chdir = TRUE)
+# Tutorial on authenticating: https://www.r-bloggers.com/getting-started-with-twitter-in-r/
 
 # import and format tweet data
 tweet_data <- read.csv("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/tweet_data.csv")
@@ -32,9 +33,6 @@ user_data <- ddply(tweet_data, .(user), function(x) {
   data.frame(time_join, time_bin, followers)
 })
 
-# export user data
-#write.csv(user_data, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/user_data.csv", row.names = FALSE)
-
 ######################################
 # GET FRIEND DATA FOR SOCIAL NETWORK #
 ######################################
@@ -51,6 +49,9 @@ for (i in 1:length(lookup)) {
 # drop NULL/NA users
 sum(sapply(friends, function(x) length(x)==1)) # drop 316
 friends <- friends[!sapply(friends, function(x) length(x)==1)] # 3992 remaining
+
+# export friend list
+# saveRDS(friends, file="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/friend_list.rds")
 
 ##############################
 # CREATE CO-FOLLOWER NETWORK #
@@ -150,9 +151,6 @@ popular.friends <- function (graph, membershipVector, friendsList, clusterID, N)
 topfriends1 <- popular.friends(g, greedy_mem, friends, 1, 25)
 topfriends2 <- popular.friends(g, greedy_mem, friends, 2, 25)
 topfriends3 <- popular.friends(g, greedy_mem, friends, 3, 25)
-
-# export top friends
-#saveRDS(topfriends, "~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/data/topfriends.rds")
 
 #########################################
 # ADD CLUSTER INFORMATION TO TWEET DATA #

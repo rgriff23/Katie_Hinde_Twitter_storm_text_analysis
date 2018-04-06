@@ -17,13 +17,14 @@
 library("twitteR")
 library("tm")
 library("wordcloud")
-library("Rstem") # dependency for sentiment
-library("sentiment") # naive bayes
-library("RSentiment") # calculate_sentiment
+library("Rstem") 
+library("sentiment") 
+library("RSentiment") 
 library("plyr") 
 
-# My Twitter authentication 
-source('~/Dropbox/Code/R/twitter_setup.R', chdir = TRUE)
+# My Twitter authentication (customize for yourself)
+# source('~/Dropbox/Code/R/twitter_setup.R', chdir = TRUE)
+# Tutorial on authenticating: https://www.r-bloggers.com/getting-started-with-twitter-in-r/
 
 ################################
 # GET REPLIES AND QUOTE TWEETS #
