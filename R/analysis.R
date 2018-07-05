@@ -177,7 +177,7 @@ ggplot(tweet_data2[!is.na(tweet_data2$sentimentB),], aes(x=cluster, fill=sentime
         legend.title=element_text(size=20),
         legend.text=element_text(size=12))
 
-# create corpuses (corpi?)
+# create corpuses
 corpus1 <- Corpus(VectorSource(tweet_data$text[tweet_data$cluster==1]))
 corpus1 <- tm_map(tm_map(corpus1, removeWords, stopwords('english')), stemDocument)
 corpus2 <- Corpus(VectorSource(tweet_data$text[tweet_data$cluster==2]))

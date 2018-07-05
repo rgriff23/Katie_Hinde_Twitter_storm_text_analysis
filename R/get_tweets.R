@@ -117,7 +117,7 @@ sum(is.na(tweet_data$sentimentB))/nrow(tweet_data) # 65.3% unclassified
 tweet_data$followerCount <- tweet_data$friendCount <- rep(0, nrow(tweet_data))
 tweet_data$location <- tweet_data$description <- rep("0", nrow(tweet_data))
 
-# Loop to get data (have to keep restarting it after hitting the rate/retry limit of 900/15 mins)
+# Loop to get data (note: rate/retry limit of 900/15 mins)
 for (i in 4501:nrow(tweet_data)) {
   temp <- try(getUser(tweet_data$user[i]))
   if (class(temp) == "try-error") {
