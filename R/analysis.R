@@ -7,6 +7,7 @@ library("plyr")
 library("ggplot2")
 library("tm")
 library("topicmodels")
+library("RTextTools")
 library("wordcloud")
 library("igraph")
 library("animation")
@@ -15,7 +16,7 @@ library("animation")
 tweet_data <- read.csv("https://raw.githubusercontent.com/rgriff23/Katie_Hinde_Twitter_storm_text_analysis/master/data/tweet_data.csv")
 tweet_data$sentimentA <- factor(tweet_data$sentimentA, levels=c("Very Negative", "Negative", "Neutral", "Positive","Very Positive"))
 tweet_data$sentimentB <- factor(tweet_data$sentimentB, levels=c("joy","sadness","anger","surprise","fear","disgust"))
-tweet_data$time <- as.POSIXct(tweet_data$time, format="%Y-%m-%d %H:%M:%S")
+tweet_data$time <- as.POSIXct(tweet_data$time, format="%m/%d/%y %H:%M")
 
 # import social network, layout for plotting, and popular friends from each cluster
 temp <- tempfile()
@@ -105,9 +106,19 @@ term <- terms(test, 7)
 term <- apply(term, MARGIN = 2, paste, collapse = ", ")
 term
 
-###########################
-# SOCIAL NETWORK ANALYSIS #
-###########################
+#######################################################
+# MOST POPULAR FRIENDS IN EACH SOCIAL NETWORK CLUSTER #
+#######################################################
+
+# combine top friends into table
+topfriends <- cbind(topfriends[[1]], topfriends[[2]], topfriends[[3]])
+colnames(topfriends) <- c("Cluster 1", "Cluster 2", "Cluster 3")
+rownames(topfriends) <- 1:25
+topfriends
+
+#######################
+# PLOT SOCIAL NETWORK #
+#######################
 
 # remove edges for plotting
 g2 <- delete_edges(g, E(g))
@@ -125,17 +136,7 @@ saveGIF({
     plot(g2, vertex.color=cols, ylim=c(-0.75,0.3), xlim=c(-0.3,0.6), vertex.label=labs, vertex.label.cex=1, vertex.label.color="black", vertex.label.font=2, layout=g_layout)
     }
 },
-interval=1, movie.name="~/Desktop/GitHub/Katie_Hinde_Twitter_storm_text_analysis/network_animation.gif")
-
-########################################
-# MOST POPULAR FRIENDS IN EACH CLUSTER #
-########################################
-
-# combine top friends into table
-topfriends <- cbind(topfriends[[1]], topfriends[[2]], topfriends[[3]])
-colnames(topfriends) <- c("Cluster 1", "Cluster 2", "Cluster 3")
-rownames(topfriends) <- 1:25
-topfriends
+interval=1, movie.name="~/Desktop/network_animation.gif")
 
 ######################################
 # SENTIMENTS & WORDS IN EACH CLUSTER #
@@ -177,21 +178,8 @@ ggplot(tweet_data2[!is.na(tweet_data2$sentimentB),], aes(x=cluster, fill=sentime
         legend.title=element_text(size=20),
         legend.text=element_text(size=12))
 
-# create corpuses
-corpus1 <- Corpus(VectorSource(tweet_data$text[tweet_data$cluster==1]))
-corpus1 <- tm_map(tm_map(corpus1, removeWords, stopwords('english')), stemDocument)
-corpus2 <- Corpus(VectorSource(tweet_data$text[tweet_data$cluster==2]))
-corpus2 <- tm_map(tm_map(corpus2, removeWords, stopwords('english')), stemDocument)
-corpus3 <- Corpus(VectorSource(tweet_data$text[tweet_data$cluster==3]))
-corpus3 <- tm_map(tm_map(corpus3, removeWords, stopwords('english')), stemDocument)
-
-# wordclouds for each cluster
-wordcloud(corpus1$content, max.words = 100, colors=heat.colors(6), random.order = FALSE)
-wordcloud(corpus2$content, max.words = 100, colors=heat.colors(6), random.order = FALSE)
-wordcloud(corpus3$content, max.words = 100, colors=heat.colors(6), random.order = FALSE)
-
 # comparison cloud
-cloudC <- ddply(tweet_data[tweet_data$cluster%in%c(1:3),], .(cluster), function (x) {paste(x$text, collapse=" ")})
+cloudC <- ddply(tweet_data[tweet_data$cluster%in%c("Apolitical", "Rightwing","Leftwing"),], .(cluster), function (x) {paste(x$text, collapse=" ")})
 cloudC <- Corpus(VectorSource(cloudC$V1))
 cloudC <- tm_map(tm_map(cloudC, removeWords, stopwords('english')), stemDocument)
 cloudC <- as.matrix(TermDocumentMatrix(cloudC))
